@@ -18,8 +18,8 @@ import * as fs from "fs";
 /* ---------- CLI 플래그 ---------- */
 (async () => {
   const argv = await yargs(hideBin(process.argv))
-    .option("token-a-mint", { type: "string", demandOption: true })
-    .option("token-b-mint", { type: "string", demandOption: true })
+    .option("token-a-pub-key", { type: "string", demandOption: true })
+    .option("token-b-pub-key", { type: "string", demandOption: true })
     .option("trade-fee", { type: "number", default: 25 }) // 0.25 %
     .option("payer", { type: "string", demandOption: true })
     .option("keys-path", { type: "string", demandOption: true })
@@ -30,8 +30,8 @@ import * as fs from "fs";
   /* ---------- 기본 설정 ---------- */
   const keysPath = argv["keys-path"];
   const payerKeyPath = argv.payer;
-  const tokenAMintKeyPath = argv["token-a-mint"];
-  const tokenBMintKeyPath = argv["token-b-mint"];
+  const tokenAPubKey = new PublicKey(argv["token-a-pub-key"]);
+  const tokenBPubKey = new PublicKey(argv["token-b-pub-key"]);
 
   // check if keys path exists
   if (!fs.existsSync(keysPath)) {
@@ -41,20 +41,6 @@ import * as fs from "fs";
   // check if payer keypair exists
   if (!fs.existsSync(payerKeyPath)) {
     throw new Error(`Payer keypair does not exist: ${payerKeyPath}`);
-  }
-
-  // check if token A vault exists
-  if (!fs.existsSync(tokenAMintKeyPath)) {
-    throw new Error(
-      `Token A vault keypair does not exist: ${tokenAMintKeyPath}`
-    );
-  }
-
-  // check if token B vault exists
-  if (!fs.existsSync(tokenBMintKeyPath)) {
-    throw new Error(
-      `Token B vault keypair does not exist: ${tokenBMintKeyPath}`
-    );
   }
 
   const conn = new Connection(argv.url, "confirmed");
@@ -82,8 +68,6 @@ import * as fs from "fs";
 
   const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
   const authority = loadKeypairFromFile(`${keysPath}/authority.json`); // Authority 어카운트
-  const tokenAVault = loadKeypairFromFile(tokenAMintKeyPath, true); // Token A Vault
-  const tokenBVault = loadKeypairFromFile(tokenBMintKeyPath, true); // Token B Vault
   const lpMint = loadKeypairFromFile(`${keysPath}/lp-mint.json`); // LP Mint 어카운트
   const feeVault = loadKeypairFromFile(`${keysPath}/fee-vault.json`); // Fee Vault 어카운트
   const poolVault = loadKeypairFromFile(`${keysPath}/pool-vault.json`); // Pool Vault 어카운트
@@ -94,8 +78,8 @@ import * as fs from "fs";
   const instruction = TokenSwap.createInitSwapInstruction(
     swap, // tokenSwapAccount
     authority.publicKey, // authority
-    tokenAVault.publicKey, // tokenAccountA
-    tokenBVault.publicKey, // tokenAccountB
+    tokenAPubKey, // tokenAccountA
+    tokenBPubKey, // tokenAccountB
     lpMint.publicKey, // tokenPool (LP Mint)
     feeVault.publicKey, // feeAccount
     poolVault.publicKey, // tokenAccountPool (LP 보관용)
