@@ -1,0 +1,23 @@
+{
+  "name": "amm-tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.1",
+  "devDependencies": {
+    "@solana/spl-token": "^0.4.13",
+    "@solana/spl-token-swap": "^0.4.4",
+    "@solana/web3.js": "^1.98.2",
+    "@types/node": "^24.0.3",
+    "@types/yargs": "^17.0.33",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "yargs": "^18.0.0"
+  }
+}
