@@ -35,7 +35,10 @@ import * as fs from "fs";
 
   // check if keys path exists
   if (!fs.existsSync(keysPath)) {
-    throw new Error(`Keys path does not exist: ${keysPath}`);
+    fs.mkdirSync(keysPath, { recursive: true });
+    console.log(`Created keys directory: ${keysPath}`);
+  } else if (!fs.statSync(keysPath).isDirectory()) {
+    throw new Error(`Keys path is not a directory: ${keysPath}`);
   }
 
   // check if payer keypair exists
