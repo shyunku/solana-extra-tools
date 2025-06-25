@@ -33,7 +33,10 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
       filePath,
       JSON.stringify(Array.from(newKeypair.secretKey))
     );
-    console.log(`✅ Generated new keypair and saved to: ${filePath}`);
+    console.log(
+      `✅ Generated new keypair and saved to ${filePath}:`,
+      newKeypair.publicKey.toBase58()
+    );
     return newKeypair;
   }
   // load existing keypair from file
@@ -41,7 +44,10 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     JSON.parse(fs.readFileSync(filePath, "utf8"))
   );
   const keypair = Keypair.fromSecretKey(secretKey);
-  console.log(`✅ Loaded keypair from: ${filePath}`);
+  console.log(
+    `✅ Loaded keypair from ${filePath}:`,
+    keypair.publicKey.toBase58()
+  );
   return keypair;
 }
 
