@@ -204,7 +204,8 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     conn,
     payer, // 수수료 지불 + 초기 LP Token 제공
     mintLP, // LP Token Mint
-    authorityPDA // owner (PDA)
+    authorityPDA, // owner (PDA)
+    true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Pool Vault:", poolVault.address.toBase58());
 
