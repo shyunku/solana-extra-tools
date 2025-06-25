@@ -106,11 +106,11 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("🍌 Token Banana Mint:", mintB.toBase58());
 
   // 2. create keypair for Token Swap
-  console.log(`\n2. Creating Token Swap Keypair...`);
+  console.log(`\n\x1b[34m2. Creating Token Swap Keypair...\x1b[0m`);
   const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
 
   // 3. get authority PDA from Token Swap
-  console.log(`\n3. Getting Authority PDA for Token Swap...`);
+  console.log(`\n\x1b[34m3. Getting Authority PDA for Token Swap...\x1b[0m`);
   const [authorityPDA, authorityBump] = PublicKey.findProgramAddressSync(
     [swap.publicKey.toBuffer()],
     TOKEN_SWAP_PROGRAM_ID
@@ -118,7 +118,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("🔑 Authority PDA:", authorityPDA.toBase58());
 
   // 4. Vault A, Vault B 계정 생성
-  console.log(`\n4. Creating Vaults for Token A and B...`);
+  console.log(`\n\x1b[34m4. Creating Vaults for Token A and B...\x1b[0m`);
   const tokenAPubKey = new PublicKey(mintA);
   const tokenBPubKey = new PublicKey(mintB);
 
@@ -139,7 +139,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("🔒 Banana Vault(B):", vaultB.address.toBase58());
 
   // 5. Vault A, B로 Apple, Banana 각각 발행
-  console.log(`\n5. Minting Tokens to Vaults...`);
+  console.log(`\n\x1b[34m5. Minting Tokens to Vaults...\x1b[0m`);
   const mintAInfo = await getMint(conn, tokenAPubKey);
   const mintBInfo = await getMint(conn, tokenBPubKey);
 
@@ -175,7 +175,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   );
 
   // 6. create LP Token
-  console.log(`\n6. Creating LP Token Mint...`);
+  console.log(`\n\x1b[34m6. Creating LP Token Mint...\x1b[0m`);
   const mintLP = await createMint(
     conn,
     payer, // 이 계정이 LP Mint 권한을 가짐
@@ -189,7 +189,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("💳 LP Token Mint:", mintLP.toBase58());
 
   // 7. create Pool Vault
-  console.log(`\n7. Creating Pool Vault for LP Token...`);
+  console.log(`\n\x1b[34m7. Creating Pool Vault for LP Token...\x1b[0m`);
   const poolVault = await getOrCreateAssociatedTokenAccount(
     conn,
     payer, // 수수료 지불 + 초기 LP Token 제공
@@ -199,7 +199,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("🔒 Pool Vault:", poolVault.address.toBase58());
 
   // 8. create Fee Vault
-  console.log(`\n8. Creating Fee Vault for LP Token...`);
+  console.log(`\n\x1b[34m8. Creating Fee Vault for LP Token...\x1b[0m`);
   const feeVault = await getOrCreateAssociatedTokenAccount(
     conn,
     payer, // 수수료 지불 + 초기 LP Token 제공
@@ -209,7 +209,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   console.log("🔒 Fee Vault:", feeVault.address.toBase58());
 
   // 9. create Token Swap Pool
-  console.log(`\n9. Creating Token Swap Pool...`);
+  console.log(`\n\x1b[34m9. Creating Token Swap Pool...\x1b[0m`);
   const initIx = TokenSwap.createInitSwapInstruction(
     swap, // tokenSwapAccount
     authorityPDA, // authority
