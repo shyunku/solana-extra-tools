@@ -84,6 +84,8 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   const payer = loadKeypairFromFile(payerKeyPath, true); // Payer Vault 어카운트
   let signature: string;
   const tokenVaultMintAmount = 1_000_000_000n; // 10^9 (1억) 개
+  console.log(`TOKEN_PROGRAM_ID: ${TOKEN_PROGRAM_ID.toBase58()}`);
+  console.log(`TOKEN_SWAP_PROGRAM_ID: ${TOKEN_SWAP_PROGRAM_ID.toBase58()}`);
 
   // 1. create token A, B
   console.log(`\n\x1b[34m1. Creating Token A and B...\x1b[0m`);
