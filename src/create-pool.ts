@@ -2,6 +2,7 @@ import {
   TokenSwap,
   CurveType,
   TOKEN_SWAP_PROGRAM_ID,
+  TokenSwapLayout,
 } from "@solana/spl-token-swap";
 import {
   Connection,
@@ -10,6 +11,7 @@ import {
   Transaction,
   sendAndConfirmTransaction,
   SendTransactionError,
+  SystemProgram,
 } from "@solana/web3.js";
 import {
   getMint,
@@ -220,6 +222,22 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
 
   // 9. create Token Swap Pool
   console.log(`\n\x1b[34m9. Creating Token Swap Pool...\x1b[0m`);
+
+  // 9‑A. swap 계정 만들기 (rent‑exempt, 프로그램 소유)
+  const swapRent = await conn.getMinimumBalanceForRentExemption(
+    TokenSwapLayout.span
+  );
+  console.log("Swap Rent Exemption:", swapRent);
+
+  const createSwapAccountIx = SystemProgram.createAccount({
+    fromPubkey: payer.publicKey,
+    newAccountPubkey: swap.publicKey,
+    lamports: swapRent,
+    space: TokenSwapLayout.span,
+    programId: TOKEN_SWAP_PROGRAM_ID,
+  });
+  console.log("🔨 Creating Token Swap Account...");
+
   const initIx = TokenSwap.createInitSwapInstruction(
     swap, // tokenSwapAccount
     authorityPDA, // authority
@@ -241,10 +259,13 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     CurveType.ConstantProduct, // curveType (0)
     undefined // curveParams (없으면 undefined)
   );
+  console.log("🔧 Initializing Token Swap Pool...");
 
-  const tx = new Transaction().add(initIx);
+  const tx = new Transaction().add(createSwapAccountIx).add(initIx);
   tx.feePayer = payer.publicKey;
+
   try {
+    console.log("⏳ Sending transaction to create Token Swap Pool...");
     signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
       commitment: "confirmed",
     });
