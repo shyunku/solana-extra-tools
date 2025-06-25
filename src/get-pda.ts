@@ -8,6 +8,7 @@
 import { PublicKey } from "@solana/web3.js";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import { getSeedBuffer } from "./util";
 
 (async () => {
   const argv = await yargs(hideBin(process.argv))
@@ -20,17 +21,7 @@ import { hideBin } from "yargs/helpers";
 
   /* seed 는 pubkey 문자열·ASCII 문자열·hex 문자열 어떤 것이든
      Buffer 로 변환한 뒤 배열 한 칸에 넣으면 됩니다.             */
-  let seedBuf: Buffer;
-  try {
-    seedBuf = new PublicKey(argv.seed).toBuffer(); // pubkey 로 해석 시도
-  } catch {
-    if (/^[0-9a-f]+$/i.test(argv.seed)) {
-      seedBuf = Buffer.from(argv.seed, "hex"); // hex 인코딩
-    } else {
-      seedBuf = Buffer.from(argv.seed); // 평문 ASCII
-    }
-  }
-
+  let seedBuf: Buffer = getSeedBuffer(argv["seed"]);
   const [pda, bump] = PublicKey.findProgramAddressSync([seedBuf], programId);
 
   console.log("✅ PDA :", pda.toBase58());

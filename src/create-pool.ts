@@ -9,22 +9,20 @@ import {
   Keypair,
   Transaction,
   sendAndConfirmTransaction,
-  SystemProgram,
 } from "@solana/web3.js";
 import {
-  createInitializeMintInstruction,
-  createTransferInstruction,
   getMint,
   getOrCreateAssociatedTokenAccount,
-  MINT_SIZE,
   mintToChecked,
   TOKEN_PROGRAM_ID,
+  createMint,
 } from "@solana/spl-token";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as fs from "fs";
 
 function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
+  console.log(`Loading keypair from file: ${filePath}...`);
   if (!fs.existsSync(filePath)) {
     if (strict === true) {
       throw new Error(`Keypair file does not exist: ${filePath}`);
@@ -35,39 +33,31 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
       filePath,
       JSON.stringify(Array.from(newKeypair.secretKey))
     );
+    console.log(`✅ Generated new keypair and saved to: ${filePath}`);
     return newKeypair;
   }
   // load existing keypair from file
   const secretKey = new Uint8Array(
     JSON.parse(fs.readFileSync(filePath, "utf8"))
   );
-  return Keypair.fromSecretKey(secretKey);
+  const keypair = Keypair.fromSecretKey(secretKey);
+  console.log(`✅ Loaded keypair from: ${filePath}`);
+  return keypair;
 }
 
 /* ---------- CLI 플래그 ---------- */
 (async () => {
   const argv = await yargs(hideBin(process.argv))
-    .option("token-a-pub-key", { type: "string", demandOption: true })
-    .option("token-b-pub-key", { type: "string", demandOption: true })
     .option("trade-fee", { type: "number", default: 25 }) // 0.25 %
-    .option("payer", { type: "string", demandOption: true })
+    .option("payer-keypair", { type: "string", demandOption: true })
     .option("swap-key-dir", { type: "string", demandOption: true })
-    .option("victim-key-dir", { type: "string" })
-    .option("victims", { type: "number", default: 5 })
     .option("url", { type: "string", default: "http://127.0.0.1:8899" })
     .strict()
     .parse();
 
   /* ---------- 기본 설정 ---------- */
   const keysPath = argv["swap-key-dir"];
-  const victimKeysPath = argv["victim-key-dir"];
-  const payerKeyPath = argv.payer;
-  const tokenAPubKey = new PublicKey(argv["token-a-pub-key"]);
-  const tokenBPubKey = new PublicKey(argv["token-b-pub-key"]);
-  const victimCount = argv.victims; // 피해자 수
-  if (victimCount < 1 || victimCount > 100) {
-    throw new Error("Victim count must be between 1 and 100.");
-  }
+  const payerKeyPath = argv["payer-keypair"];
   const tradeFee = BigInt(argv["trade-fee"]); // 0.25% = 25
 
   // check if keys path exists
@@ -78,136 +68,154 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     throw new Error(`Keys path is not a directory: ${keysPath}`);
   }
 
-  // check if victim keys path exists
-  if (victimKeysPath && !fs.existsSync(victimKeysPath)) {
-    fs.mkdirSync(victimKeysPath, { recursive: true });
-    console.log(`Created victim keys directory: ${victimKeysPath}`);
-  } else if (victimKeysPath && !fs.statSync(victimKeysPath).isDirectory()) {
-    throw new Error(`Victim keys path is not a directory: ${victimKeysPath}`);
-  }
-
   // check if payer keypair exists
   if (!fs.existsSync(payerKeyPath)) {
     throw new Error(`Payer keypair does not exist: ${payerKeyPath}`);
   }
 
+  /* Initialize Environment & Variables */
   const conn = new Connection(argv.url, "confirmed");
-  const victims = Array(victimCount)
-    .fill(null)
-    .map((_, i) => {
-      const victimKeyPath = `${victimKeysPath}/victim-${i + 1}.json`;
-      return loadKeypairFromFile(victimKeyPath, false);
-    });
-
-  const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
-  const lpMint = loadKeypairFromFile(`${keysPath}/lp-mint.json`); // LP Mint 어카운트
-
   const payer = loadKeypairFromFile(payerKeyPath, true); // Payer Vault 어카운트
-  const [authority, bump] = PublicKey.findProgramAddressSync(
+  let signature: string;
+  const tokenVaultMintAmount = 1_000_000_000n; // 10^9 (1억) 개
+
+  // 1. create token A, B
+  console.log(`\n1. Creating Token A and B...`);
+  const mintA = await createMint(
+    conn, // 연결된 Solana 클러스터
+    payer, // 이 계정이 Mint 권한을 가짐
+    payer.publicKey, // mintAuthority는 이 계정
+    payer.publicKey, // freezeAuthority는 이 계정
+    9, // 소수점 자리수 (decimals)
+    undefined,
+    undefined,
+    TOKEN_PROGRAM_ID // Solana의 기본 SPL 토큰 프로그램
+  );
+  console.log("🍎 Token Apple Mint:", mintA.toBase58());
+
+  const mintB = await createMint(
+    conn,
+    payer,
+    payer.publicKey,
+    payer.publicKey,
+    9,
+    undefined,
+    undefined,
+    TOKEN_PROGRAM_ID
+  );
+  console.log("🍌 Token Banana Mint:", mintB.toBase58());
+
+  // 2. create keypair for Token Swap
+  console.log(`\n2. Creating Token Swap Keypair...`);
+  const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
+
+  // 3. get authority PDA from Token Swap
+  console.log(`\n3. Getting Authority PDA for Token Swap...`);
+  const [authorityPDA, authorityBump] = PublicKey.findProgramAddressSync(
     [swap.publicKey.toBuffer()],
     TOKEN_SWAP_PROGRAM_ID
   );
+  console.log("🔑 Authority PDA:", authorityPDA.toBase58());
 
-  const initA = 1_000_000n;
-  const initB = 1_000_000n;
+  // 4. Vault A, Vault B 계정 생성
+  console.log(`\n4. Creating Vaults for Token A and B...`);
+  const tokenAPubKey = new PublicKey(mintA);
+  const tokenBPubKey = new PublicKey(mintB);
 
-  const payerAtaA = await getOrCreateAssociatedTokenAccount(
-    conn,
-    payer,
-    tokenAPubKey,
-    payer.publicKey // 자기 지갑
-  );
-  const payerAtaB = await getOrCreateAssociatedTokenAccount(
-    conn,
-    payer,
-    tokenBPubKey,
-    payer.publicKey
-  );
-
-  await mintToChecked(
-    conn,
-    payer, // 민트 authority 키 (TOKEN_A/B를 만들 때 authority = payer 라고 가정)
-    tokenAPubKey,
-    payerAtaA.address,
-    payer,
-    1_000_000_000n,
-    0 // decimals
-  );
-  await mintToChecked(
-    conn,
-    payer,
-    tokenBPubKey,
-    payerAtaB.address,
-    payer,
-    1_000_000_000n,
-    0
-  );
-
-  const tokenAccountA = await getOrCreateAssociatedTokenAccount(
+  const vaultA = await getOrCreateAssociatedTokenAccount(
     conn,
     payer, // 수수료 지불 + 초기 토큰 제공
     tokenAPubKey, // A 토큰 Mint
-    authority // owner
+    authorityPDA // owner (PDA)
   );
-  const tokenAccountB = await getOrCreateAssociatedTokenAccount(
+  console.log("🔒 Apple Vault(A):", vaultA.address.toBase58());
+
+  const vaultB = await getOrCreateAssociatedTokenAccount(
     conn,
     payer, // 수수료 지불 + 초기 토큰 제공
     tokenBPubKey, // B 토큰 Mint
-    authority // owner
+    authorityPDA // owner (PDA)
   );
+  console.log("🔒 Banana Vault(B):", vaultB.address.toBase58());
 
-  // 초기 유동성 전송 (지갑 → 볼트)
-  const transferA = createTransferInstruction(
-    payerAtaA.address,
-    tokenAccountA.address,
-    payer.publicKey,
-    initA
-  );
-  const transferB = createTransferInstruction(
-    payerAtaB.address,
-    tokenAccountB.address,
-    payer.publicKey,
-    initB
-  );
+  // 5. Vault A, B로 Apple, Banana 각각 발행
+  console.log(`\n5. Minting Tokens to Vaults...`);
+  const mintAInfo = await getMint(conn, tokenAPubKey);
+  const mintBInfo = await getMint(conn, tokenBPubKey);
 
-  const lamportsForMint = await conn.getMinimumBalanceForRentExemption(
-    MINT_SIZE
-  );
-  const createLpMintIx = SystemProgram.createAccount({
-    fromPubkey: payer.publicKey,
-    newAccountPubkey: lpMint.publicKey,
-    lamports: lamportsForMint,
-    space: MINT_SIZE,
-    programId: TOKEN_PROGRAM_ID,
-  });
-  const initLpMintIx = createInitializeMintInstruction(
-    lpMint.publicKey,
-    9, // decimals
-    authority, // mintAuthority
-    null // freezeAuthority
-  );
+  console.log("🍎 Apple Mint Info:", mintAInfo);
+  console.log("🍌 Banana Mint Info:", mintBInfo);
 
-  // 5) feeVault / poolVault (mint = LP, owner = authority / fee지갑)
-  const feeVault = await getOrCreateAssociatedTokenAccount(
+  signature = await mintToChecked(
     conn,
-    payer,
-    lpMint.publicKey,
-    payer.publicKey // 수수료 받을 지갑
+    payer, // 민트 authority 키 (payer가 민트 권한을 가짐)
+    tokenAPubKey,
+    vaultA.address, // Vault A로 민트
+    payer, // payer가 수수료 지불
+    tokenVaultMintAmount, // 발행량
+    9 // decimals
   );
+  console.log(
+    `Minted ${tokenVaultMintAmount} 🍎 → Vault A, signature:`,
+    signature
+  );
+
+  signature = await mintToChecked(
+    conn,
+    payer, // 민트 authority 키 (payer가 민트 권한을 가짐)
+    tokenBPubKey,
+    vaultB.address, // Vault B로 민트
+    payer, // payer가 수수료 지불
+    tokenVaultMintAmount, // 발행량
+    9 // decimals
+  );
+  console.log(
+    `Minted ${tokenVaultMintAmount} 🍌 → Vault B, signature:`,
+    signature
+  );
+
+  // 6. create LP Token
+  console.log(`\n6. Creating LP Token Mint...`);
+  const mintLP = await createMint(
+    conn,
+    payer, // 이 계정이 LP Mint 권한을 가짐
+    authorityPDA, // mintAuthority는 authority PDA
+    null, // freezeAuthority는 없음
+    9, // LP Token의 소수점 자리수 (decimals)
+    undefined,
+    undefined,
+    TOKEN_PROGRAM_ID // Solana의 기본 SPL 토큰 프로그램
+  );
+  console.log("💳 LP Token Mint:", mintLP.toBase58());
+
+  // 7. create Pool Vault
+  console.log(`\n7. Creating Pool Vault for LP Token...`);
   const poolVault = await getOrCreateAssociatedTokenAccount(
     conn,
-    payer,
-    lpMint.publicKey,
-    authority
+    payer, // 수수료 지불 + 초기 LP Token 제공
+    mintLP, // LP Token Mint
+    authorityPDA // owner (PDA)
   );
+  console.log("🔒 Pool Vault:", poolVault.address.toBase58());
 
-  /* ---------- 풀 초기화 Instruction ---------- */
+  // 8. create Fee Vault
+  console.log(`\n8. Creating Fee Vault for LP Token...`);
+  const feeVault = await getOrCreateAssociatedTokenAccount(
+    conn,
+    payer, // 수수료 지불 + 초기 LP Token 제공
+    mintLP, // LP Token Mint
+    payer.publicKey // owner (PDA)
+  );
+  console.log("🔒 Fee Vault:", feeVault.address.toBase58());
+
+  // 9. create Token Swap Pool
+  console.log(`\n9. Creating Token Swap Pool...`);
   const initIx = TokenSwap.createInitSwapInstruction(
     swap, // tokenSwapAccount
-    authority, // authority
-    tokenAccountA.address, // tokenAccountA
-    tokenAccountB.address, // tokenAccountB
-    lpMint.publicKey, // tokenPool (LP Mint)
+    authorityPDA, // authority
+    vaultA.address, // tokenAccountA
+    vaultB.address, // tokenAccountB
+    mintLP, // tokenPool (LP Mint)
     feeVault.address, // feeAccount
     poolVault.address, // tokenAccountPool (LP 보관용)
     TOKEN_PROGRAM_ID, // SPL Token Program
@@ -224,16 +232,10 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     undefined // curveParams (없으면 undefined)
   );
 
-  const tx = new Transaction()
-    .add(createLpMintIx, initLpMintIx) // LP Mint 계정 생성 & 초기화
-    .add(transferA, transferB) // 초기 유동성
-    .add(initIx); // 풀 초기화
-
+  const tx = new Transaction().add(initIx);
   tx.feePayer = payer.publicKey;
-
-  const sig = await sendAndConfirmTransaction(conn, tx, [payer, lpMint, swap], {
+  signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
     commitment: "confirmed",
   });
-  console.log("Swap pool created!");
-  console.log("signature:", sig);
+  console.log("✅ Token Swap Pool created, signature:", signature);
 })();
