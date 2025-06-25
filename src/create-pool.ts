@@ -9,6 +9,7 @@ import {
   Keypair,
   Transaction,
   sendAndConfirmTransaction,
+  SendTransactionError,
 } from "@solana/web3.js";
 import {
   getMint,
@@ -239,8 +240,15 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
 
   const tx = new Transaction().add(initIx);
   tx.feePayer = payer.publicKey;
-  signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
-    commitment: "confirmed",
-  });
-  console.log("✅ Token Swap Pool created, signature:", signature);
+  try {
+    signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
+      commitment: "confirmed",
+    });
+    console.log("✅ Token Swap Pool created, signature:", signature);
+  } catch (err) {
+    console.error("❌ Failed to create Token Swap Pool:", err);
+    if (err instanceof SendTransactionError) {
+      console.log(err.transactionError); // 여기에서 로그를 확인할 수 있습니다
+    }
+  }
 })();
