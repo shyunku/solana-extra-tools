@@ -150,12 +150,6 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
 
   // 5. Vault A, B로 Apple, Banana 각각 발행
   console.log(`\n\x1b[34m5. Minting Tokens to Vaults...\x1b[0m`);
-  const mintAInfo = await getMint(conn, tokenAPubKey);
-  const mintBInfo = await getMint(conn, tokenBPubKey);
-
-  console.log("🍎 Apple Mint Info:", mintAInfo);
-  console.log("🍌 Banana Mint Info:", mintBInfo);
-
   signature = await mintToChecked(
     conn,
     payer, // 민트 authority 키 (payer가 민트 권한을 가짐)
