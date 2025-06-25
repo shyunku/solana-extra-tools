@@ -20,5 +20,9 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "yargs": "^18.0.0"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@openbook-dex/openbook-v2": "^0.2.10"
   }
 }

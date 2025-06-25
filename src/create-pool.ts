@@ -24,42 +24,13 @@ import {
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as fs from "fs";
-
-function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
-  console.log(`Loading keypair from file: ${filePath}...`);
-  if (!fs.existsSync(filePath)) {
-    if (strict === true) {
-      throw new Error(`Keypair file does not exist: ${filePath}`);
-    }
-    // generate and save a new keypair if file does not exist
-    const newKeypair = Keypair.generate();
-    fs.writeFileSync(
-      filePath,
-      JSON.stringify(Array.from(newKeypair.secretKey))
-    );
-    console.log(
-      `✅ Generated new keypair and saved to ${filePath}:`,
-      newKeypair.publicKey.toBase58()
-    );
-    return newKeypair;
-  }
-  // load existing keypair from file
-  const secretKey = new Uint8Array(
-    JSON.parse(fs.readFileSync(filePath, "utf8"))
-  );
-  const keypair = Keypair.fromSecretKey(secretKey);
-  console.log(
-    `✅ Loaded keypair from ${filePath}:`,
-    keypair.publicKey.toBase58()
-  );
-  return keypair;
-}
+import { loadKeypairFromFile } from "./util";
 
 /* ---------- CLI 플래그 ---------- */
 (async () => {
   const argv = await yargs(hideBin(process.argv))
     .option("trade-fee", { type: "number", default: 25 }) // 0.25 %
-    .option("payer-keypair", { type: "string", demandOption: true })
+    .option("payer", { type: "string", demandOption: true })
     .option("swap-key-dir", { type: "string", demandOption: true })
     .option("url", { type: "string", default: "http://127.0.0.1:8899" })
     .strict()
@@ -67,7 +38,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
 
   /* ---------- 기본 설정 ---------- */
   const keysPath = argv["swap-key-dir"];
-  const payerKeyPath = argv["payer-keypair"];
+  const payerKeyPath = argv["payer"];
   const tradeFee = BigInt(argv["trade-fee"]); // 0.25% = 25
 
   // check if keys path exists
@@ -76,11 +47,6 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     console.log(`Created keys directory: ${keysPath}`);
   } else if (!fs.statSync(keysPath).isDirectory()) {
     throw new Error(`Keys path is not a directory: ${keysPath}`);
-  }
-
-  // check if payer keypair exists
-  if (!fs.existsSync(payerKeyPath)) {
-    throw new Error(`Payer keypair does not exist: ${payerKeyPath}`);
   }
 
   /* Initialize Environment & Variables */
