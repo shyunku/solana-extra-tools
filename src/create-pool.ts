@@ -17,6 +17,7 @@ import {
   mintToChecked,
   TOKEN_PROGRAM_ID,
   createMint,
+  createAccount,
 } from "@solana/spl-token";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -114,9 +115,12 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   );
   console.log("🍌 Token Banana Mint:", mintB.toBase58());
 
-  // 2. create keypair for Token Swap
-  console.log(`\n\x1b[34m2. Creating Token Swap Keypair...\x1b[0m`);
+  // 2. create keypair for Token Swap & Fee Owner
+  console.log(
+    `\n\x1b[34m2. Creating Token Swap Keypair & Fee Owner Keypair...\x1b[0m`
+  );
   const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
+  const feeOwner = loadKeypairFromFile(`${keysPath}/fee-owner.json`); // 수수료 소유자 어카운트
 
   // 3. get authority PDA from Token Swap
   console.log(`\n\x1b[34m3. Getting Authority PDA for Token Swap...\x1b[0m`);
@@ -206,13 +210,13 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
 
   // 8. create Fee Vault
   console.log(`\n\x1b[34m8. Creating Fee Vault for LP Token...\x1b[0m`);
-  const feeVault = await getOrCreateAssociatedTokenAccount(
+  const feeVault = await createAccount(
     conn,
     payer, // 수수료 지불 + 초기 LP Token 제공
     mintLP, // LP Token Mint
-    payer.publicKey // owner (PDA)
+    feeOwner.publicKey // owner (PDA)
   );
-  console.log("🔒 Fee Vault:", feeVault.address.toBase58());
+  console.log("🔒 Fee Vault:", feeVault.toBase58());
 
   // 9. create Token Swap Pool
   console.log(`\n\x1b[34m9. Creating Token Swap Pool...\x1b[0m`);
@@ -222,7 +226,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     vaultA.address, // tokenAccountA
     vaultB.address, // tokenAccountB
     mintLP, // tokenPool (LP Mint)
-    feeVault.address, // feeAccount
+    feeVault, // feeAccount
     poolVault.address, // tokenAccountPool (LP 보관용)
     TOKEN_PROGRAM_ID, // SPL Token Program
     TOKEN_SWAP_PROGRAM_ID, // Swap Program
