@@ -134,7 +134,8 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     conn,
     payer, // 수수료 지불 + 초기 토큰 제공
     tokenAPubKey, // A 토큰 Mint
-    authorityPDA // owner (PDA)
+    authorityPDA, // owner (PDA)
+    true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Apple Vault(A):", vaultA.address.toBase58());
 
@@ -142,7 +143,8 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
     conn,
     payer, // 수수료 지불 + 초기 토큰 제공
     tokenBPubKey, // B 토큰 Mint
-    authorityPDA // owner (PDA)
+    authorityPDA, // owner (PDA)
+    true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Banana Vault(B):", vaultB.address.toBase58());
 
