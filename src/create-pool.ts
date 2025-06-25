@@ -115,12 +115,9 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   );
   console.log("🍌 Token Banana Mint:", mintB.toBase58());
 
-  // 2. create keypair for Token Swap & Fee Owner
-  console.log(
-    `\n\x1b[34m2. Creating Token Swap Keypair & Fee Owner Keypair...\x1b[0m`
-  );
+  // 2. create keypair for Token Swap
+  console.log(`\n\x1b[34m2. Creating Token Swap Keypair...\x1b[0m`);
   const swap = loadKeypairFromFile(`${keysPath}/swap.json`); // Token Swap 어카운트
-  const feeOwner = loadKeypairFromFile(`${keysPath}/fee-owner.json`); // 수수료 소유자 어카운트
 
   // 3. get authority PDA from Token Swap
   console.log(`\n\x1b[34m3. Getting Authority PDA for Token Swap...\x1b[0m`);
@@ -208,8 +205,11 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   );
   console.log("🔒 Pool Vault:", poolVault.address.toBase58());
 
-  // 8. create Fee Vault
-  console.log(`\n\x1b[34m8. Creating Fee Vault for LP Token...\x1b[0m`);
+  // 8. create Fee Owner Key Pair & Vault
+  console.log(
+    `\n\x1b[34m8. Creating Fee Owner Keypair & Fee Vault for LP Token...\x1b[0m`
+  );
+  const feeOwner = loadKeypairFromFile(`${keysPath}/fee-owner.json`); // 수수료 소유자 어카운트
   const feeVault = await createAccount(
     conn,
     payer, // 수수료 지불 + 초기 LP Token 제공
@@ -245,17 +245,12 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   const tx = new Transaction().add(initIx);
   tx.feePayer = payer.publicKey;
   try {
-    signature = await sendAndConfirmTransaction(
-      conn,
-      tx,
-      [payer, feeOwner, swap],
-      {
-        commitment: "confirmed",
-      }
-    );
+    signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
+      commitment: "confirmed",
+    });
     console.log("✅ Token Swap Pool created, signature:", signature);
   } catch (err) {
-    console.error("❌ Failed to create Token Swap Pool:", err);
+    console.error("❌ Failed to create Token Swap Pool:", err.message);
     if (err instanceof SendTransactionError) {
       console.log(err.transactionError);
     }
