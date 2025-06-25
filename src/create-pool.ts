@@ -80,7 +80,7 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   const tokenVaultMintAmount = 1_000_000_000n; // 10^9 (1억) 개
 
   // 1. create token A, B
-  console.log(`\n1. Creating Token A and B...`);
+  console.log(`\n\x1b[34m1. Creating Token A and B...\x1b[0m`);
   const mintA = await createMint(
     conn, // 연결된 Solana 클러스터
     payer, // 이 계정이 Mint 권한을 가짐
