@@ -1,5 +1,5 @@
 import {
-  TokenSwap, // ← 이걸 가져옵니다
+  TokenSwap,
   CurveType,
   TOKEN_SWAP_PROGRAM_ID,
 } from "@solana/spl-token-swap";
@@ -245,14 +245,19 @@ function loadKeypairFromFile(filePath: string, strict?: boolean): Keypair {
   const tx = new Transaction().add(initIx);
   tx.feePayer = payer.publicKey;
   try {
-    signature = await sendAndConfirmTransaction(conn, tx, [payer, swap], {
-      commitment: "confirmed",
-    });
+    signature = await sendAndConfirmTransaction(
+      conn,
+      tx,
+      [payer, feeOwner, swap],
+      {
+        commitment: "confirmed",
+      }
+    );
     console.log("✅ Token Swap Pool created, signature:", signature);
   } catch (err) {
     console.error("❌ Failed to create Token Swap Pool:", err);
     if (err instanceof SendTransactionError) {
-      console.log(err.transactionError); // 여기에서 로그를 확인할 수 있습니다
+      console.log(err.transactionError);
     }
   }
 })();
