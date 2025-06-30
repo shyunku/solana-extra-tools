@@ -80,7 +80,17 @@ import { loadKeypairFromFile } from "./util";
     throw new Error("No instructions generated for market creation");
   }
 
+  // signers 배열에서 새로 생성된 Market의 Keypair를 가져옵니다.
+  if (signers.length === 0) {
+    throw new Error("Market keypair was not returned in signers array.");
+  }
+  const marketKeypair = signers[0] as Keypair;
+  const marketId = marketKeypair.publicKey;
+
   const tx = new Transaction().add(...ixs);
   const sig = await provider.sendAndConfirm(tx, signers);
-  console.log("📈 Market created:", sig);
+
+  console.log("📈 Market created successfully!");
+  console.log("   - Market ID:", marketId.toBase58());
+  console.log("   - Transaction Signature:", sig);
 })();
