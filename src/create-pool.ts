@@ -24,7 +24,7 @@ import {
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as fs from "fs";
-import { loadKeypairFromFile } from "./util";
+import { loadKeypairFromFile, saveFileTo } from "./util";
 
 /* ---------- CLI 플래그 ---------- */
 (async () => {
@@ -32,6 +32,7 @@ import { loadKeypairFromFile } from "./util";
     .option("trade-fee", { type: "number", default: 25 }) // 0.25 %
     .option("payer", { type: "string", demandOption: true })
     .option("swap-key-dir", { type: "string", demandOption: true })
+    .option("dest-dir", { type: "string", demandOption: true })
     .option("url", { type: "string", default: "http://127.0.0.1:8899" })
     .strict()
     .parse();
@@ -40,6 +41,7 @@ import { loadKeypairFromFile } from "./util";
   const keysPath = argv["swap-key-dir"];
   const payerKeyPath = argv["payer"];
   const tradeFee = BigInt(argv["trade-fee"]); // 0.25% = 25
+  const destDir = argv["dest-dir"];
 
   // check if keys path exists
   if (!fs.existsSync(keysPath)) {
@@ -47,6 +49,14 @@ import { loadKeypairFromFile } from "./util";
     console.log(`Created keys directory: ${keysPath}`);
   } else if (!fs.statSync(keysPath).isDirectory()) {
     throw new Error(`Keys path is not a directory: ${keysPath}`);
+  }
+
+  // check if dest directory exists
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+    console.log(`Created destination directory: ${destDir}`);
+  } else if (!fs.statSync(destDir).isDirectory()) {
+    throw new Error(`Destination path is not a directory: ${destDir}`);
   }
 
   /* Initialize Environment & Variables */
@@ -70,6 +80,7 @@ import { loadKeypairFromFile } from "./util";
     TOKEN_PROGRAM_ID // Solana의 기본 SPL 토큰 프로그램
   );
   console.log("🍎 Token Apple Mint:", mintA.toBase58());
+  saveFileTo(`${destDir}/mint-apple.json`, mintA.toBase58());
 
   const mintB = await createMint(
     conn,
@@ -82,6 +93,7 @@ import { loadKeypairFromFile } from "./util";
     TOKEN_PROGRAM_ID
   );
   console.log("🍌 Token Banana Mint:", mintB.toBase58());
+  saveFileTo(`${destDir}/mint-banana.json`, mintB.toBase58());
 
   // 2. create keypair for Token Swap
   console.log(`\n\x1b[34m2. Creating Token Swap Keypair...\x1b[0m`);
@@ -94,6 +106,10 @@ import { loadKeypairFromFile } from "./util";
     TOKEN_SWAP_PROGRAM_ID
   );
   console.log("🔑 Authority PDA:", authorityPDA.toBase58());
+  saveFileTo(
+    `${destDir}/authority-pda.json`,
+    authorityPDA.toBase58() + `\nBump: ${authorityBump}`
+  );
 
   // 4. Vault A, Vault B 계정 생성
   console.log(`\n\x1b[34m4. Creating Vaults for Token A and B...\x1b[0m`);
@@ -108,6 +124,7 @@ import { loadKeypairFromFile } from "./util";
     true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Apple Vault(A):", vaultA.address.toBase58());
+  saveFileTo(`${destDir}/vault-apple.json`, vaultA.address.toBase58());
 
   const vaultB = await getOrCreateAssociatedTokenAccount(
     conn,
@@ -117,6 +134,7 @@ import { loadKeypairFromFile } from "./util";
     true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Banana Vault(B):", vaultB.address.toBase58());
+  saveFileTo(`${destDir}/vault-banana.json`, vaultB.address.toBase58());
 
   // 5. Vault A, B로 Apple, Banana 각각 발행
   console.log(`\n\x1b[34m5. Minting Tokens to Vaults...\x1b[0m`);
@@ -161,6 +179,7 @@ import { loadKeypairFromFile } from "./util";
     TOKEN_PROGRAM_ID // Solana의 기본 SPL 토큰 프로그램
   );
   console.log("💳 LP Token Mint:", mintLP.toBase58());
+  saveFileTo(`${destDir}/mint-lp.json`, mintLP.toBase58());
 
   // 7. create Pool Vault
   console.log(`\n\x1b[34m7. Creating Pool Vault for LP Token...\x1b[0m`);
@@ -172,6 +191,7 @@ import { loadKeypairFromFile } from "./util";
     true // allowOwnerOffCurve: true (PDA가 소유자)
   );
   console.log("🔒 Pool Vault:", poolVault.address.toBase58());
+  saveFileTo(`${destDir}/vault-pool.json`, poolVault.address.toBase58());
 
   // 8. create Fee Owner Key Pair & Vault
   console.log(
@@ -185,6 +205,7 @@ import { loadKeypairFromFile } from "./util";
     feeOwner.publicKey // owner (PDA)
   );
   console.log("🔒 Fee Vault:", feeVault.toBase58());
+  saveFileTo(`${destDir}/vault-fee.json`, feeVault.toBase58());
 
   // 9. create Token Swap Pool
   console.log(`\n\x1b[34m9. Creating Token Swap Pool...\x1b[0m`);

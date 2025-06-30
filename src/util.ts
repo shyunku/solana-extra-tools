@@ -51,3 +51,8 @@ export function loadKeypairFromFile(
   );
   return keypair;
 }
+
+export function saveFileTo(filePath: string, data: string | Buffer): void {
+  fs.writeFileSync(filePath, data);
+  console.log(`✅ Saved data to ${filePath}`);
+}
