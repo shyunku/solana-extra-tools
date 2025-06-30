@@ -3,7 +3,7 @@ import { OpenBookV2Client } from "@openbook-dex/openbook-v2";
 import * as anchor from "@coral-xyz/anchor";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { loadKeypairFromFile } from "./util";
+import { loadKeypairFromFile, saveFileTo } from "./util";
 
 (async () => {
   const argv = await yargs(hideBin(process.argv))
