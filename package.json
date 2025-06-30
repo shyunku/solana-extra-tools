@@ -7,7 +7,8 @@
     "create-pool": "npx ts-node src/create-pool.ts",
     "get-pda": "npx ts-node src/get-pda.ts",
     "create-market": "npx ts-node src/create-market.ts",
-    "check-market-status": "npx ts-node src/check-market-status.ts"
+    "check-market-status": "npx ts-node src/check-market-status.ts",
+    "check-markets": "npx ts-node src/check-markets.ts"
   },
   "keywords": [],
   "author": "",
