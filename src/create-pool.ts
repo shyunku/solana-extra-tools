@@ -106,6 +106,9 @@ function saveAddressToFile(filepath: string, data: string): void {
   const connection = new Connection(argv.url, "confirmed");
   const payer = loadKeypairFromFile(argv.payer);
 
+  const feeOwner = loadKeypairFromFile(`${keysPath}/fee_owner.json`);
+  console.log(`Fee Owner: ${feeOwner.publicKey.toBase58()}`);
+
   // 사용할 Token Swap 프로그램 ID 결정
   const TOKEN_SWAP_PROGRAM_ID = argv.swapProgramId
     ? new PublicKey(argv.swapProgramId)
@@ -220,6 +223,17 @@ function saveAddressToFile(filepath: string, data: string): void {
     lpTokenAccount.address.toBase58()
   );
 
+  /* ---------- 7-B. 수수료 전용 Vault 생성 ---------- */
+  console.log(`\n\x1b[34m[7-B] 🏦 수수료 전용 Vault 생성 중...\x1b[0m`);
+  const feeVault = await getOrCreateAssociatedTokenAccount(
+    connection,
+    payer, // 계정 생성 비용은 여전히 payer가 지불
+    lpTokenMint, // LP 토큰을 담을 계좌
+    feeOwner.publicKey // !! 이 Vault의 소유자는 feeOwner
+  );
+  console.log(`   - Fee Vault: ${feeVault.address.toBase58()}`);
+  saveAddressToFile(`${keysPath}/vault_fee`, feeVault.address.toBase58());
+
   /* ---------- 8. 토큰 스왑 풀 생성 트랜잭션 실행 ---------- */
   console.log(
     `\n\x1b[34m[8/8] 🚀  토큰 스왑 풀 생성 트랜잭션 전송 중...\x1b[0m`
@@ -247,7 +261,7 @@ function saveAddressToFile(filepath: string, data: string): void {
       vaultA.address,
       vaultB.address,
       lpTokenMint,
-      lpTokenAccount.address, // 수수료 계정. 실제로는 별도 계정을 만들지만 여기서는 LP 계정을 활용
+      feeVault.address, // 수수료 계정. 실제로는 별도 계정을 만들지만 여기서는 LP 계정을 활용
       lpTokenAccount.address, // 유동성 공급자가 LP 토큰을 받을 계정
       TOKEN_PROGRAM_ID,
       TOKEN_SWAP_PROGRAM_ID,

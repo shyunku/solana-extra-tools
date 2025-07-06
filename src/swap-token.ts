@@ -84,6 +84,10 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
     readAddressFromFile(`${argv.keyDir}/mint_lp.txt`)
   );
 
+  const feeAccountAddress = new PublicKey(
+    readAddressFromFile(`${argv.keyDir}/payer_lp_token_account.txt`)
+  );
+
   console.log(`   - 스왑할 풀: ${swapAccountAddress.toBase58()}`);
 
   /* ---------- 2. 사용자의 토큰 계정 준비 및 테스트용 토큰 민팅 ---------- */
@@ -136,7 +140,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
       vaultBAddress, // 6. poolDestination: 풀의 토큰 B 금고
       userTokenBAccount.address, // 7. userDestination: 사용자의 토큰 B 계정 (받는 쪽)
       lpMintAddress, // 8. poolMint: LP 토큰의 민트 주소
-      userTokenBAccount.address, // 9. feeAccount: 스왑 수수료가 쌓일 계정 (LP 제공자 몫)
+      feeAccountAddress, // 9. feeAccount: 스왑 수수료가 쌓일 계정 (LP 제공자 몫)
       null, // 10. hostFeeAccount: (선택) 추천인 수수료 계정, 없으면 null
       mintAAddress, // 11. sourceMint: 주는 토큰(A)의 민트 주소
       mintBAddress, // 12. destinationMint: 받는 토큰(B)의 민트 주소
