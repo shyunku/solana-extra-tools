@@ -1,4 +1,4 @@
-import { TokenSwap } from "@solana/spl-token-swap";
+import { TOKEN_SWAP_PROGRAM_ID, TokenSwap } from "@solana/spl-token-swap";
 import {
   Connection,
   PublicKey,
@@ -83,9 +83,6 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   const lpMintAddress = new PublicKey(
     readAddressFromFile(`${argv.keyDir}/mint_lp.txt`)
   );
-  const swapProgramId = new PublicKey(
-    readAddressFromFile(`${argv.keyDir}/swap_program_id.txt`)
-  );
 
   console.log(`   - 스왑할 풀: ${swapAccountAddress.toBase58()}`);
 
@@ -143,7 +140,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
       null, // 10. hostFeeAccount: (선택) 추천인 수수료 계정, 없으면 null
       mintAAddress, // 11. sourceMint: 주는 토큰(A)의 민트 주소
       mintBAddress, // 12. destinationMint: 받는 토큰(B)의 민트 주소
-      swapProgramId, // 13. swapProgramId: 토큰 스왑 프로그램 ID
+      TOKEN_SWAP_PROGRAM_ID, // 13. swapProgramId: 토큰 스왑 프로그램 ID
       TOKEN_PROGRAM_ID, // 14. sourceTokenProgramId: 토큰 A의 프로그램 ID
       TOKEN_PROGRAM_ID, // 15. destinationTokenProgramId: 토큰 B의 프로그램 ID
       TOKEN_PROGRAM_ID, // 16. poolTokenProgramId: LP 토큰의 프로그램 ID
