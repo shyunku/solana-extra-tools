@@ -95,7 +95,7 @@ function saveAddressToFile(filepath: string, data: string): void {
   /* ---------- 기본 설정 및 변수 초기화 ---------- */
   const keysPath = argv["key-dir"];
   const tradeFee = BigInt(argv["trade-fee"]);
-  const initialTokenAmount = 1_000_000_000n; // 초기 유동성으로 공급할 토큰 양 (9 소수점 기준)
+  const initialTokenAmount = 1e17; // 초기 유동성으로 공급할 토큰 양 (9 소수점 기준)
 
   // 키 저장 디렉토리 생성
   if (!fs.existsSync(keysPath)) {
