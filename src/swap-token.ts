@@ -60,9 +60,11 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
     `\x1b[34m[1/4] 🔍 풀 정보 로드 중 (from ${argv.keyDir})...\x1b[0m`
   );
   // create-amm-pool.ts에서 저장한 파일들로부터 주소를 읽어옵니다.
-  const swapAccountAddress = new PublicKey(
-    readAddressFromFile(`${argv.keyDir}/swap_account_address.txt`)
-  );
+  const swapAccountAddress = loadKeypairFromFile(
+    `${argv.keyDir}/swap_account.json`,
+    true
+  ).publicKey;
+
   const mintAAddress = new PublicKey(
     readAddressFromFile(`${argv.keyDir}/mint_a.txt`)
   );
