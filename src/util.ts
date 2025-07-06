@@ -1,5 +1,6 @@
 import { Keypair, PublicKey } from "@solana/web3.js";
 import fs from "fs";
+import path from "path";
 
 export function getSeedBuffer(seed: string): Buffer {
   if (typeof seed !== "string") {
@@ -50,6 +51,11 @@ export function loadKeypairFromFile(
     keypair.publicKey.toBase58()
   );
   return keypair;
+}
+
+export function readAddressFromFile(filepath: string): string {
+  const fullPath = path.resolve(filepath);
+  return fs.readFileSync(fullPath, { encoding: "utf8" }).trim();
 }
 
 export function saveFileTo(filePath: string, data: string | Buffer): void {
