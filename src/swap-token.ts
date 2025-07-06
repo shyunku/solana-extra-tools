@@ -83,10 +83,9 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   const lpMintAddress = new PublicKey(
     readAddressFromFile(`${argv.keyDir}/mint_lp.txt`)
   );
-  const feeAccountAddress = loadKeypairFromFile(
-    `${argv.keyDir}/fee_owner.json`,
-    true
-  ).publicKey;
+  const feeAccountAddress = new PublicKey(
+    readAddressFromFile(`${argv.keyDir}/vault_fee.txt`)
+  );
 
   console.log(`   - 스왑할 풀: ${swapAccountAddress.toBase58()}`);
 
