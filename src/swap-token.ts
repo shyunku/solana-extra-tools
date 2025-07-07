@@ -34,11 +34,15 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
       description: "AMM 풀 키/주소 파일이 저장된 디렉토리 경로",
       demandOption: true,
     })
-    .option("amount-in", {
+    .option("amount-a", {
       alias: "a",
       type: "number",
       description: "스왑할 토큰 A의 양",
-      demandOption: true,
+    })
+    .option("amount-b", {
+      alias: "b",
+      type: "number",
+      description: "스왑할 토큰 B의 양",
     })
     .option("url", {
       alias: "u",
@@ -53,7 +57,12 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   const connection = new Connection(argv.url, "confirmed");
   const payer = loadKeypairFromFile(argv.payer);
   // 커맨드라인에서 받은 숫자를 BigInt와 9자리 소수점으로 변환
-  const amountIn = BigInt(argv.amountIn * 10 ** 9);
+  if (!argv.amountA && !argv.amountB) {
+    throw new Error(`amountIn or amountOut should be given`);
+  }
+
+  const amountA = BigInt(argv.amountA * 10 ** 9);
+  const amountB = BigInt(argv.amountB * 10 ** 9);
 
   /* ---------- 1. key-dir에서 풀 정보 로드 ---------- */
   console.log(
@@ -105,15 +114,28 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   );
 
   // 테스트를 위해 사용자에게 스왑할 만큼의 Token A를 즉시 민팅해줍니다.
-  await mintTo(
-    connection,
-    payer,
-    mintAAddress,
-    userTokenAAccount.address,
-    payer,
-    amountIn
-  );
-  console.log(`   - 테스트용 Token A ${argv.amountIn}개 민팅 완료.`);
+  const sellingA = amountA > 0;
+  if (sellingA) {
+    await mintTo(
+      connection,
+      payer,
+      mintAAddress,
+      userTokenAAccount.address,
+      payer,
+      amountA
+    );
+    console.log(`   - 테스트용 Token A ${argv.amountA}개 민팅 완료.`);
+  } else {
+    await mintTo(
+      connection,
+      payer,
+      mintBAddress,
+      userTokenAAccount.address,
+      payer,
+      amountB
+    );
+    console.log(`   - 테스트용 Token B ${argv.amountB}개 민팅 완료.`);
+  }
 
   const tokenAAccountBefore = await getAccount(
     connection,
@@ -129,28 +151,48 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
 
   /* ---------- 3. 스왑 트랜잭션 생성 ---------- */
   console.log(`\n\x1b[34m[3/4] 🛠️ 스왑 트랜잭션 생성 중...\x1b[0m`);
-  const transaction = new Transaction().add(
-    TokenSwap.swapInstruction(
-      swapAccountAddress, // 1. tokenSwap: 스왑 풀의 주소
-      authorityPDAAddress, // 2. authority: 풀의 권한 PDA
-      payer.publicKey, // 3. userTransferAuthority: 사용자의 공개키
-      userTokenAAccount.address, // 4. userSource: 사용자의 토큰 A 계정 (주는 쪽)
-      vaultAAddress, // 5. poolSource: 풀의 토큰 A 금고
-      vaultBAddress, // 6. poolDestination: 풀의 토큰 B 금고
-      userTokenBAccount.address, // 7. userDestination: 사용자의 토큰 B 계정 (받는 쪽)
-      lpMintAddress, // 8. poolMint: LP 토큰의 민트 주소
-      feeAccountAddress, // 9. feeAccount: 스왑 수수료가 쌓일 계정 (LP 제공자 몫)
-      null, // 10. hostFeeAccount: (선택) 추천인 수수료 계정, 없으면 null
-      mintAAddress, // 11. sourceMint: 주는 토큰(A)의 민트 주소
-      mintBAddress, // 12. destinationMint: 받는 토큰(B)의 민트 주소
-      TOKEN_SWAP_PROGRAM_ID, // 13. swapProgramId: 토큰 스왑 프로그램 ID
-      TOKEN_PROGRAM_ID, // 14. sourceTokenProgramId: 토큰 A의 프로그램 ID
-      TOKEN_PROGRAM_ID, // 15. destinationTokenProgramId: 토큰 B의 프로그램 ID
-      TOKEN_PROGRAM_ID, // 16. poolTokenProgramId: LP 토큰의 프로그램 ID
-      amountIn, // 17. amountIn: 주는 토큰의 양
-      0n // 18. minimumAmountOut: 최소한 받아야 하는 토큰의 양
-    )
-  );
+  const instruction = sellingA
+    ? TokenSwap.swapInstruction(
+        swapAccountAddress, // 1. tokenSwap: 스왑 풀의 주소
+        authorityPDAAddress, // 2. authority: 풀의 권한 PDA
+        payer.publicKey, // 3. userTransferAuthority: 사용자의 공개키
+        userTokenAAccount.address, // 4. userSource: 사용자의 토큰 A 계정 (주는 쪽)
+        vaultAAddress, // 5. poolSource: 풀의 토큰 A 금고
+        vaultBAddress, // 6. poolDestination: 풀의 토큰 B 금고
+        userTokenBAccount.address, // 7. userDestination: 사용자의 토큰 B 계정 (받는 쪽)
+        lpMintAddress, // 8. poolMint: LP 토큰의 민트 주소
+        feeAccountAddress, // 9. feeAccount: 스왑 수수료가 쌓일 계정 (LP 제공자 몫)
+        null, // 10. hostFeeAccount: (선택) 추천인 수수료 계정, 없으면 null
+        mintAAddress, // 11. sourceMint: 주는 토큰(A)의 민트 주소
+        mintBAddress, // 12. destinationMint: 받는 토큰(B)의 민트 주소
+        TOKEN_SWAP_PROGRAM_ID, // 13. swapProgramId: 토큰 스왑 프로그램 ID
+        TOKEN_PROGRAM_ID, // 14. sourceTokenProgramId: 토큰 A의 프로그램 ID
+        TOKEN_PROGRAM_ID, // 15. destinationTokenProgramId: 토큰 B의 프로그램 ID
+        TOKEN_PROGRAM_ID, // 16. poolTokenProgramId: LP 토큰의 프로그램 ID
+        amountA, // 17. amountIn: 주는 토큰의 양
+        0n // 18. minimumAmountOut: 최소한 받아야 하는 토큰의 양
+      )
+    : TokenSwap.swapInstruction(
+        swapAccountAddress, // 1. tokenSwap: 스왑 풀의 주소
+        authorityPDAAddress, // 2. authority: 풀의 권한 PDA
+        payer.publicKey, // 3. userTransferAuthority: 사용자의 공개키
+        userTokenBAccount.address, // 4. userSource: 사용자의 토큰 A 계정 (주는 쪽)
+        vaultBAddress, // 5. poolSource: 풀의 토큰 A 금고
+        vaultAAddress, // 6. poolDestination: 풀의 토큰 B 금고
+        userTokenAAccount.address, // 7. userDestination: 사용자의 토큰 B 계정 (받는 쪽)
+        lpMintAddress, // 8. poolMint: LP 토큰의 민트 주소
+        feeAccountAddress, // 9. feeAccount: 스왑 수수료가 쌓일 계정 (LP 제공자 몫)
+        null, // 10. hostFeeAccount: (선택) 추천인 수수료 계정, 없으면 null
+        mintBAddress, // 11. sourceMint: 주는 토큰(A)의 민트 주소
+        mintAAddress, // 12. destinationMint: 받는 토큰(B)의 민트 주소
+        TOKEN_SWAP_PROGRAM_ID, // 13. swapProgramId: 토큰 스왑 프로그램 ID
+        TOKEN_PROGRAM_ID, // 14. sourceTokenProgramId: 토큰 A의 프로그램 ID
+        TOKEN_PROGRAM_ID, // 15. destinationTokenProgramId: 토큰 B의 프로그램 ID
+        TOKEN_PROGRAM_ID, // 16. poolTokenProgramId: LP 토큰의 프로그램 ID
+        amountB, // 17. amountIn: 주는 토큰의 양
+        0n // 18. minimumAmountOut: 최소한 받아야 하는 토큰의 양
+      );
+  const transaction = new Transaction().add(instruction);
 
   /* ---------- 4. 트랜잭션 전송 ---------- */
   console.log(`\n\x1b[34m[4/4] 🚀 스왑 트랜잭션 전송 중...\x1b[0m`);
