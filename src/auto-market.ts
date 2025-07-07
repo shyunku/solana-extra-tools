@@ -275,4 +275,7 @@ class Victim {
       payer,
     })
   );
+
+  // infinite await
+  await new Promise(() => {});
 })();
