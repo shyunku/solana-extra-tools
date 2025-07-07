@@ -125,6 +125,8 @@ class Victim {
     const { intervalMsFunc, minAmt, maxAmt, switchProb = 0.1 } = loopParams;
 
     while (true) {
+      await new Promise((r) => setTimeout(r, intervalMsFunc()));
+
       /* 1️⃣ 이전 상태를 그대로 사용해 ‘모멘텀’ 유지 */
       const dir = this.currentDir;
 
@@ -142,8 +144,6 @@ class Victim {
       if (Math.random() < switchProb) {
         this.currentDir = this.currentDir === "AtoB" ? "BtoA" : "AtoB";
       }
-
-      await new Promise((r) => setTimeout(r, intervalMsFunc()));
     }
   }
 }
@@ -267,6 +267,7 @@ class Victim {
   }
 
   /* ---------- 3. Victim Trade Loop 시작 ---------- */
+  console.log(`   - Starting Trade Loop...`);
   victims.forEach((v) =>
     v.tradeLoop({
       intervalMsFunc: () => logarithmRandom(minTradeInterval, maxTradeInterval),
