@@ -62,11 +62,11 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   }
 
   const amountA =
-    argv.amountA > 0 || isNaN(argv.amountA)
+    argv.amountA === 0 || isNaN(argv.amountA)
       ? BigInt(0)
       : BigInt(argv.amountA * 10 ** 9);
   const amountB =
-    argv.amountB > 0 || isNaN(argv.amountB)
+    argv.amountB === 0 || isNaN(argv.amountB)
       ? BigInt(0)
       : BigInt(argv.amountB * 10 ** 9);
   console.log(`amountA=${amountA} amountB=${amountB}`);
