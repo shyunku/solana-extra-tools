@@ -1,4 +1,9 @@
-import { Keypair, PublicKey } from "@solana/web3.js";
+import {
+  getAccount,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+} from "@solana/spl-token";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import fs from "fs";
 import path from "path";
 
@@ -61,4 +66,26 @@ export function readAddressFromFile(filepath: string): string {
 export function saveFileTo(filePath: string, data: string | Buffer): void {
   fs.writeFileSync(filePath, data);
   console.log(`✅ Saved data to ${filePath}`);
+}
+
+export async function ensureAta(
+  conn: Connection,
+  payer: Keypair,
+  mint: PublicKey,
+  owner: PublicKey
+) {
+  return getOrCreateAssociatedTokenAccount(conn, payer, mint, owner);
+}
+
+export async function ensureBalance(
+  conn: Connection,
+  payer: Keypair,
+  mint: PublicKey,
+  ata: PublicKey,
+  amount: bigint
+) {
+  const acc = await getAccount(conn, ata);
+  if (acc.amount < amount) {
+    await mintTo(conn, payer, mint, ata, payer, amount - acc.amount);
+  }
 }

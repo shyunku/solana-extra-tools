@@ -6,6 +6,7 @@
   "scripts": {
     "create-pool": "npx ts-node src/create-pool.ts",
     "swap-token": "npx ts-node src/swap-token.ts",
+    "auto-market": "npx ts-node src/auto-market.ts",
     "get-pda": "npx ts-node src/get-pda.ts"
   },
   "keywords": [],
