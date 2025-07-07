@@ -119,7 +119,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
     payer.publicKey
   );
 
-  // 테스트를 위해 사용자에게 스왑할 만큼의 Token A를 즉시 민팅해줍니다.
+  // 테스트를 위해 사용자에게 스왑할 만큼의 Token A/B를 즉시 민팅해줍니다.
   const sellingA = amountA > 0;
   if (sellingA) {
     await mintTo(
@@ -136,7 +136,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
       connection,
       payer,
       mintBAddress,
-      userTokenAAccount.address,
+      userTokenBAccount.address,
       payer,
       amountB
     );
