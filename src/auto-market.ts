@@ -18,7 +18,6 @@ import * as fs from "fs";
 import path from "path";
 import {
   ensureAta,
-  ensureBalance,
   loadKeypairFromFile,
   logarithmRandom,
   readAddressFromFile,
@@ -26,8 +25,8 @@ import {
 
 class Victim {
   public keypair: Keypair;
-  public aBalance: BigInt;
-  public bBalance: BigInt;
+  public aBalance: bigint = 0n;
+  public bBalance: bigint = 0n;
 
   private tokenA!: { ata: PublicKey };
   private tokenB!: { ata: PublicKey };
@@ -57,8 +56,34 @@ class Victim {
       ata: (await ensureAta(this.conn, payer, mintB, this.keypair.publicKey))
         .address,
     };
-    await ensureBalance(this.conn, payer, mintA, this.tokenA.ata, mintAmt);
-    await ensureBalance(this.conn, payer, mintB, this.tokenB.ata, mintAmt);
+
+    const aAccount = await getAccount(this.conn, this.tokenA.ata);
+    const bAccount = await getAccount(this.conn, this.tokenB.ata);
+
+    this.aBalance = aAccount.amount;
+    this.bBalance = bAccount.amount;
+
+    if (this.aBalance < mintAmt) {
+      await mintTo(
+        this.conn,
+        payer,
+        mintA,
+        this.tokenA.ata,
+        payer,
+        mintAmt - this.aBalance
+      );
+    }
+
+    if (this.bBalance < mintAmt) {
+      await mintTo(
+        this.conn,
+        payer,
+        mintB,
+        this.tokenB.ata,
+        payer,
+        mintAmt - this.bBalance
+      );
+    }
   }
 
   async trade(
@@ -122,13 +147,15 @@ class Victim {
 
   /** 무한 루프 */
   async tradeLoop(loopParams: any) {
-    const { intervalMsFunc, minAmt, maxAmt, switchProb = 0.1 } = loopParams;
+    const { intervalMsFunc, minAmt, maxAmt } = loopParams;
 
     while (true) {
       await new Promise((r) => setTimeout(r, intervalMsFunc()));
 
-      /* 1️⃣ 이전 상태를 그대로 사용해 ‘모멘텀’ 유지 */
-      const dir = this.currentDir;
+      /* 1️⃣ 잔고 기반 확률로 방향 결정 */
+      const total = this.aBalance + this.bBalance;
+      const probBtoA = Number(this.bBalance) / Number(total); // Apple 잔고가 적을수록 커짐
+      const dir: "AtoB" | "BtoA" = Math.random() < probBtoA ? "BtoA" : "AtoB";
 
       /* 2️⃣ 주문 수량은 기존과 동일하게 로그 분포 */
       const amt = logarithmRandom(minAmt, maxAmt);
@@ -136,13 +163,16 @@ class Victim {
       try {
         await this.trade(dir, amt, loopParams);
         console.log(`[${this.name}] ${dir} ${amt}`);
+        /* 3️⃣ 로컬 잔고 업데이트(근사) */
+        if (dir === "AtoB") {
+          this.aBalance -= amt;
+          this.bBalance += amt;
+        } else {
+          this.bBalance -= amt;
+          this.aBalance += amt;
+        }
       } catch (e) {
         console.error(`[${this.name}] trade fail`, e);
-      }
-
-      /* 3️⃣ switchProb 확률로만 방향을 뒤집음 */
-      if (Math.random() < switchProb) {
-        this.currentDir = this.currentDir === "AtoB" ? "BtoA" : "AtoB";
       }
     }
   }

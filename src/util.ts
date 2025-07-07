@@ -77,19 +77,6 @@ export async function ensureAta(
   return getOrCreateAssociatedTokenAccount(conn, payer, mint, owner);
 }
 
-export async function ensureBalance(
-  conn: Connection,
-  payer: Keypair,
-  mint: PublicKey,
-  ata: PublicKey,
-  amount: bigint
-) {
-  const acc = await getAccount(conn, ata);
-  if (acc.amount < amount) {
-    await mintTo(conn, payer, mint, ata, payer, amount - acc.amount);
-  }
-}
-
 export function logarithmRandom<T extends number | bigint>(min: T, max: T): T {
   const logMin = Math.log(Number(min));
   const logMax = Math.log(Number(max));
