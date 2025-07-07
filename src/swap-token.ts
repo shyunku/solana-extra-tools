@@ -58,7 +58,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   const payer = loadKeypairFromFile(argv.payer);
   // 커맨드라인에서 받은 숫자를 BigInt와 9자리 소수점으로 변환
   if (!argv.amountA && !argv.amountB) {
-    throw new Error(`amountIn or amountOut should be given`);
+    throw new Error(`amountA or amountB should be given`);
   }
 
   const amountA =
@@ -69,6 +69,7 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
     argv.amountB > 0 || isNaN(argv.amountB)
       ? BigInt(0)
       : BigInt(argv.amountB * 10 ** 9);
+  console.log(`amountA=${amountA} amountB=${amountB}`);
 
   /* ---------- 1. key-dir에서 풀 정보 로드 ---------- */
   console.log(
