@@ -61,8 +61,14 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
     throw new Error(`amountIn or amountOut should be given`);
   }
 
-  const amountA = argv.amountA > 0 ? BigInt(0) : BigInt(argv.amountA * 10 ** 9);
-  const amountB = argv.amountB > 0 ? BigInt(0) : BigInt(argv.amountB * 10 ** 9);
+  const amountA =
+    argv.amountA > 0 || isNaN(argv.amountA)
+      ? BigInt(0)
+      : BigInt(argv.amountA * 10 ** 9);
+  const amountB =
+    argv.amountB > 0 || isNaN(argv.amountB)
+      ? BigInt(0)
+      : BigInt(argv.amountB * 10 ** 9);
 
   /* ---------- 1. key-dir에서 풀 정보 로드 ---------- */
   console.log(
