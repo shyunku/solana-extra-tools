@@ -32,6 +32,8 @@ class Victim {
   private tokenA!: { ata: PublicKey };
   private tokenB!: { ata: PublicKey };
 
+  private currentDir: "AtoB" | "BtoA" = Math.random() > 0.5 ? "AtoB" : "BtoA"; // 초기 방향 임의 설정
+
   constructor(
     private conn: Connection,
     public name: string,
@@ -120,10 +122,13 @@ class Victim {
 
   /** 무한 루프 */
   async tradeLoop(loopParams: any) {
-    const { intervalMsFunc, minAmt, maxAmt } = loopParams;
+    const { intervalMsFunc, minAmt, maxAmt, switchProb = 0.1 } = loopParams;
 
     while (true) {
-      const dir = Math.random() > 0.5 ? "AtoB" : "BtoA";
+      /* 1️⃣ 이전 상태를 그대로 사용해 ‘모멘텀’ 유지 */
+      const dir = this.currentDir;
+
+      /* 2️⃣ 주문 수량은 기존과 동일하게 로그 분포 */
       const amt = logarithmRandom(minAmt, maxAmt);
 
       try {
@@ -132,6 +137,12 @@ class Victim {
       } catch (e) {
         console.error(`[${this.name}] trade fail`, e);
       }
+
+      /* 3️⃣ switchProb 확률로만 방향을 뒤집음 */
+      if (Math.random() < switchProb) {
+        this.currentDir = this.currentDir === "AtoB" ? "BtoA" : "AtoB";
+      }
+
       await new Promise((r) => setTimeout(r, intervalMsFunc()));
     }
   }
@@ -269,6 +280,7 @@ class Victim {
       mintB: mintBAddress,
       lpMint: lpMintAddress,
       feeVault: feeAccountAddress,
+      switchProb: 0.1,
       payer,
     })
   );
