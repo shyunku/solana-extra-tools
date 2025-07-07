@@ -161,7 +161,7 @@ class Victim {
       default: 5,
     })
     .option("minting", {
-      alias: "v",
+      alias: "m",
       type: "number",
       description: "victim 각각에게 mint할 A, B 토큰 수",
       default: 1e4,
@@ -204,6 +204,8 @@ class Victim {
   const minTradeAmount = BigInt(argv.minTradeAmount * 1e9);
   const maxTradeAmount = BigInt(argv.maxTradeAmount * 1e9);
   const minting = BigInt(argv.minting * 1e9);
+
+  console.log(`Initial setting: `, argv);
 
   if (victimCount <= 0) throw new Error(`Victim count is not valid`);
   if (minting <= minTradeAmount)
