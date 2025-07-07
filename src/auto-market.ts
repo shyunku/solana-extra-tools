@@ -210,8 +210,6 @@ class Victim {
   if (victimCount <= 0) throw new Error(`Victim count is not valid`);
   if (minting <= minTradeAmount)
     throw new Error(`Minting should be bigger than minTradeAmount`);
-  if (minting >= maxTradeAmount)
-    throw new Error(`Minting should be smaller than maxTradeAmount`);
   if (maxTradeInterval < minTradeInterval)
     throw new Error(`minTradeInterval should be smaller than maxTradeInterval`);
 
