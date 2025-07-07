@@ -20,6 +20,7 @@ import {
   ensureAta,
   ensureBalance,
   loadKeypairFromFile,
+  logarithmRandom,
   readAddressFromFile,
 } from "./util";
 
@@ -119,13 +120,11 @@ class Victim {
 
   /** 무한 루프 */
   async tradeLoop(loopParams: any) {
-    const { intervalMs, minAmt, maxAmt } = loopParams;
-    const amountRange = Number(maxAmt - minAmt);
+    const { intervalMsFunc, minAmt, maxAmt } = loopParams;
 
     while (true) {
       const dir = Math.random() > 0.5 ? "AtoB" : "BtoA";
-      const amt =
-        minAmt + BigInt(Math.floor(Math.random() * (amountRange + 1)));
+      const amt = logarithmRandom(minAmt, maxAmt);
 
       try {
         await this.trade(dir, amt, loopParams);
@@ -133,7 +132,7 @@ class Victim {
       } catch (e) {
         console.error(`[${this.name}] trade fail`, e);
       }
-      await new Promise((r) => setTimeout(r, intervalMs));
+      await new Promise((r) => setTimeout(r, intervalMsFunc()));
     }
   }
 }
@@ -250,7 +249,7 @@ class Victim {
   /* ---------- 2. Victim 키페어 로드 (없으면 생성) ---------- */
   const victims: Victim[] = [];
   for (let i = 0; i < victimCount; i++) {
-    const name = `victim_${String(victimCount).padStart(3, "0")}`;
+    const name = `victim_${String(i).padStart(3, "0")}`;
     const victim = new Victim(connection, name, `${argv.keyDir}/${name}.json`);
     await victim.init(mintAAddress, mintBAddress, minting, payer);
     victims.push(victim);
@@ -259,9 +258,7 @@ class Victim {
   /* ---------- 3. Victim Trade Loop 시작 ---------- */
   victims.forEach((v) =>
     v.tradeLoop({
-      intervalMsFunc: () =>
-        minTradeInterval +
-        Math.random() * (maxTradeInterval - minTradeInterval),
+      intervalMsFunc: () => logarithmRandom(minTradeInterval, maxTradeInterval),
       minAmt: minTradeAmount,
       maxAmt: maxTradeAmount,
       swap: swapAccountAddress,

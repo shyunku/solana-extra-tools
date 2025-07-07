@@ -89,3 +89,16 @@ export async function ensureBalance(
     await mintTo(conn, payer, mint, ata, payer, amount - acc.amount);
   }
 }
+
+export function logarithmRandom<T extends number | bigint>(min: T, max: T): T {
+  const logMin = Math.log(Number(min));
+  const logMax = Math.log(Number(max));
+  const logPicked = logMin + Math.random() * (logMax - logMin);
+  const result = Math.exp(logPicked);
+
+  if (typeof min === "bigint" && typeof max === "bigint") {
+    return BigInt(Math.floor(result)) as T; // 소수점 제거 필요
+  } else {
+    return result as T;
+  }
+}
