@@ -4,7 +4,6 @@ import {
   PublicKey,
   Keypair,
   Transaction,
-  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
   getOrCreateAssociatedTokenAccount,
@@ -21,6 +20,7 @@ import {
   loadKeypairFromFile,
   logarithmRandom,
   readAddressFromFile,
+  sendTransactionViaRelayer,
 } from "./util";
 
 class Victim {
@@ -99,6 +99,7 @@ class Victim {
       lpMint: PublicKey;
       feeVault: PublicKey;
       payer: Keypair;
+      relayerUrl: string;
     }
   ) {
     const {
@@ -111,6 +112,7 @@ class Victim {
       lpMint,
       feeVault,
       payer,
+      relayerUrl,
     } = params;
 
     const userSource = direction === "AtoB" ? this.tokenA.ata : this.tokenB.ata;
@@ -142,7 +144,7 @@ class Victim {
     );
 
     const tx = new Transaction().add(ix);
-    await sendAndConfirmTransaction(this.conn, tx, [payer, this.keypair]);
+    await sendTransactionViaRelayer(tx, params.relayerUrl);
   }
 
   /** 무한 루프 */
@@ -232,6 +234,11 @@ class Victim {
       description: "Solana RPC 노드 URL",
       default: "http://127.0.0.1:8899",
     })
+    .option("relayer-url", {
+      type: "string",
+      description: "Relayer URL",
+      demandOption: true,
+    })
     .strict()
     .parse();
 
@@ -313,6 +320,7 @@ class Victim {
       feeVault: feeAccountAddress,
       switchProb: 0.1,
       payer,
+      relayerUrl: argv.relayerUrl,
     })
   );
 

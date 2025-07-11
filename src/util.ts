@@ -3,9 +3,31 @@ import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+
+export async function sendTransactionViaRelayer(
+  transaction: Transaction,
+  relayerUrl: string
+): Promise<string> {
+  // 트랜잭션을 직렬화합니다.
+  const serializedTransaction = transaction.serialize({
+    requireAllSignatures: false,
+  });
+
+  // 릴레이어에 트랜잭션을 보냅니다.
+  try {
+    const response = await axios.post(relayerUrl, {
+      transaction: serializedTransaction.toString("base64"),
+    });
+    return response.data.signature;
+  } catch (error) {
+    console.error("Error sending transaction to relayer:", error);
+    throw error;
+  }
+}
 
 export function getSeedBuffer(seed: string): Buffer {
   if (typeof seed !== "string") {
@@ -66,6 +88,17 @@ export function readAddressFromFile(filepath: string): string {
 export function saveFileTo(filePath: string, data: string | Buffer): void {
   fs.writeFileSync(filePath, data);
   console.log(`✅ Saved data to ${filePath}`);
+}
+
+/**
+ * 데이터를 지정된 파일에 저장합니다.
+ * @param filepath - 저장할 파일의 전체 경로 (확장자 제외)
+ * @param data - 저장할 데이터
+ */
+export function saveAddressToFile(filepath: string, data: string): void {
+  const fullPath = path.resolve(filepath + ".txt");
+  fs.writeFileSync(fullPath, data);
+  console.log(`💾 Address saved to ${fullPath}`);
 }
 
 export async function ensureAta(

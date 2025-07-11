@@ -4,7 +4,6 @@ import {
   PublicKey,
   Keypair,
   Transaction,
-  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
   getOrCreateAssociatedTokenAccount,
@@ -16,7 +15,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as fs from "fs";
 import path from "path";
-import { loadKeypairFromFile, readAddressFromFile } from "./util";
+import { loadKeypairFromFile, readAddressFromFile, sendTransactionViaRelayer } from "./util";
 
 // --- 메인 스크립트 ---
 (async () => {
@@ -49,6 +48,11 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
       type: "string",
       description: "Solana RPC 노드 URL",
       default: "http://127.0.0.1:8899",
+    })
+    .option("relayer-url", {
+      type: "string",
+      description: "Relayer URL",
+      demandOption: true,
     })
     .strict()
     .parse();
@@ -202,13 +206,13 @@ import { loadKeypairFromFile, readAddressFromFile } from "./util";
   const transaction = new Transaction().add(instruction);
 
   /* ---------- 4. 트랜잭션 전송 ---------- */
-  console.log(`\n\x1b[34m[4/4] 🚀 스왑 트랜잭션 전송 중...\x1b[0m`);
+  console.log(`
+\x1b[34m[4/4] 🚀 스왑 트랜잭션 전송 중...\x1b[0m`);
   try {
-    const signature = await sendAndConfirmTransaction(connection, transaction, [
-      payer,
-    ]);
+    const signature = await sendTransactionViaRelayer(transaction, argv.relayerUrl);
     console.log(
-      `\n✅ 성공! 토큰 스왑이 완료되었습니다. 인덱서 로그를 확인하세요!`
+      `
+✅ 성공! 토큰 스왑이 완료되었습니다. 인덱서 로그를 확인하세요!`
     );
     console.log(`   - 트랜잭션 서명: ${signature}`);
 

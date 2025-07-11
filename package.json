@@ -25,6 +25,6 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
-    "@openbook-dex/openbook-v2": "^0.2.10"
+    "axios": "^1.7.2"
   }
 }

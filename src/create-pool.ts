@@ -9,7 +9,6 @@ import {
   PublicKey,
   Keypair,
   Transaction,
-  sendAndConfirmTransaction,
   SystemProgram,
   SendTransactionError,
 } from "@solana/web3.js";
@@ -23,39 +22,9 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import * as fs from "fs";
 import path from "path";
+import { loadKeypairFromFile, saveAddressToFile, sendTransactionViaRelayer } from "./util";
 
-// --- 헬퍼(유틸리티) 함수 ---
 
-/**
- * 파일 경로에서 Keypair를 로드합니다. 파일이 없으면 새로 생성하여 저장합니다.
- * @param filepath - Keypair 파일의 전체 경로
- * @returns 로드되거나 생성된 Keypair
- */
-function loadKeypairFromFile(filepath: string): Keypair {
-  const fullPath = path.resolve(filepath);
-  if (fs.existsSync(fullPath)) {
-    const secretKeyString = fs.readFileSync(fullPath, { encoding: "utf8" });
-    const secretKey = Uint8Array.from(JSON.parse(secretKeyString));
-    console.log(`🔑 Keypair loaded from ${fullPath}`);
-    return Keypair.fromSecretKey(secretKey);
-  } else {
-    const keypair = Keypair.generate();
-    fs.writeFileSync(fullPath, JSON.stringify(Array.from(keypair.secretKey)));
-    console.log(`✨ New keypair generated and saved to ${fullPath}`);
-    return keypair;
-  }
-}
-
-/**
- * 데이터를 지정된 파일에 저장합니다.
- * @param filepath - 저장할 파일의 전체 경로 (확장자 제외)
- * @param data - 저장할 데이터
- */
-function saveAddressToFile(filepath: string, data: string): void {
-  const fullPath = path.resolve(filepath + ".txt");
-  fs.writeFileSync(fullPath, data);
-  console.log(`💾 Address saved to ${fullPath}`);
-}
 
 // --- 메인 스크립트 ---
 (async () => {
@@ -88,6 +57,11 @@ function saveAddressToFile(filepath: string, data: string): void {
       type: "string",
       description:
         "사용자 정의 Token Swap Program ID. 지정하지 않으면 공식 ID 사용",
+    })
+    .option("relayer-url", {
+      type: "string",
+      description: "Relayer URL",
+      demandOption: true,
     })
     .strict()
     .parse();
@@ -278,13 +252,12 @@ function saveAddressToFile(filepath: string, data: string): void {
   );
 
   try {
-    const signature = await sendAndConfirmTransaction(
-      connection,
+    const signature = await sendTransactionViaRelayer(
       transaction,
-      [payer, swapAccount], // Payer와 새로운 스왑 계정의 서명이 필요합니다.
-      { commitment: "confirmed" }
+      argv.relayerUrl
     );
-    console.log(`\n✅  성공! AMM 풀이 성공적으로 생성되었습니다.`);
+    console.log(`
+✅  성공! AMM 풀이 성공적으로 생성되었습니다.`);
     console.log(`   - 트랜잭션 서명: ${signature}`);
     console.log(`   - 스왑 주소: ${swapAccount.publicKey.toBase58()}`);
   } catch (err) {
